@@ -177,6 +177,36 @@ TotalBytes() {
 	esac
 }
 
+#################
+# TERCEIRO ITEM #
+#################
+
+# CALCULA O TOTAL DE SITES ENCONTRADOS NA CACHE
+PctSitesCacheAndDirect() {
+	while read row
+	do
+		codigo=`echo $row | awk -F ' ' '{print $4}'` # CAPTURA O VALOR DO CODIGO RESULTANTE DO ACESSO
+
+		if [[ "$codigo" = "TCP_HIT/200" ]]; then # VERIFICA SE FOI OBTIDO A PARTIR DA CACHE
+			hit=`expr $hit + 1`
+		else
+			if [[ "$codigo" = "TCP_MISS/200" ]]; then # VERIFICA SE FOI OBTIDO DIRETAMENTE
+				miss=`expr $miss + 1`
+			fi
+		fi
+	done < log.txt
+
+	totalHitMiss=`echo "scale=0 ; $hit + $miss" | bc`
+	pctHit=`echo "scale=0 ; ($hit * 100) / $totalHitMiss" | bc`
+	pctMiss=`echo "scale=0 ; ($miss * 100) / $totalHitMiss " | bc`
+
+	echo -e "******************\nPercentual de sites na cache e de acesso direto:\nCache: $pctHit%\nDireto: $pctMiss%" #IMPRIME A MENSAGEM
+	echo -e "******************\nPercentual de sites na cache e de acesso direto:\nCache: $pctHit%\nDireto: $pctMiss%" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
+}
+
+#################
+# QUARTO   ITEM #
+#################
 
 CheckOptions() {
 	case $1 in
@@ -185,7 +215,7 @@ CheckOptions() {
 		2) clear
 		   TotalBytes ;;
 		3) clear
-		   echo "Opção 3" ;;
+		   PctSitesCacheAndDirect ;;
 		4) clear
 		   echo "Opção 4" ;;
 		5) clear
