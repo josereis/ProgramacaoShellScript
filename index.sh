@@ -18,11 +18,7 @@ cat << !
 
 6 - Lista de quantitativos, por conteúdo, dos sites acessados por um dado cliente
 
-7 - Carregar arquivos de log
-
-8 - Salvar relatório
-
-9 - Sair
+7 - Sair
 
 Digite sua Opcao :
 
@@ -49,7 +45,6 @@ Digite sua Opcao:
 FoundIPs() {
 	while read row
 		do
-		#searchIp=`echo $row | awk -F ' ' '{print $3}'` # CAPTURA O VALOR DO IP DO CLIENTE PARA A LINHA ATUAL
 		echo $row |  awk -F ' ' '{print $3}' >> aux.txt
 		sort aux.txt | uniq > IPs.txt
 	done < log.txt
@@ -66,10 +61,8 @@ NumSitesDifIP() {
 
 	# PASSEIA POR TODO O ARQUIVO DE LOGs
 	while read row
-		do
-		ipClient=`echo $row | awk -F ' ' '{print $3}'` # CAPTURA O VALOR DO IP DO CLIENTE PARA A LINHA ATUAL
-		
-		if [ "$1" = "$ipClient" ]; then
+	do
+		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" ]; then
 			echo $row | awk -F ' ' '{print $7}' >> aux.txt # CAPTURA O VALOR/ENDERECO DO SITE ACESSADO PELO CLIENTE DA LINHA ATUAL E SALVA EM ARQUIVO AUXILIAR
 			sort aux.txt | uniq > sites.txt
 		fi
@@ -98,7 +91,7 @@ SearchNumSitesDifClients() {
 
 	msg="******************\nSites diferentes por IP:"
 	while read IP
-		do
+	do
 		msg+="\n$(NumSitesDifIP $IP)"
 	done < IPs.txt
 	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
@@ -129,10 +122,8 @@ TotalBytesPorIP() {
 	
 	# PASSEIA POR TODO O ARQUIVO DE LOGs
 	while read row
-		do
-		ipClient=`echo $row | awk -F ' ' '{print $3}'` # CAPTURA O VALOR DO IP DO CLIENTE PARA A LINHA ATUAL
-		
-		if [ "$1" = "$ipClient" ]; then
+	do
+		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" ]; then
 			bytes=`echo $row | awk -F ' ' '{print $5}'` # CAPTURA A QUANTIDADE DE BYTES TRANSFERIDAS
 			totalBytes=`expr $totalBytes + $bytes`
 		fi
@@ -155,7 +146,7 @@ SearchTotalBytesTodosIP() {
 
 	msg="******************\nTotal de bytes transferidos por IP:"
 	while read IP
-		do
+	do
 		msg+="\n$(TotalBytesPorIP $IP)"
 	done < IPs.txt
 	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
@@ -212,10 +203,9 @@ PctSitesCacheAndDirect() {
 ListSitesNegadosIP() {
 	msg="$1"
 	while read row
-		do
-		ipClient=`echo $row | awk -F ' ' '{print $3}'`
+	do
 		codigo=`echo $row | awk -F ' ' '{print $4}'` # CAPTURA O VALOR DO CODIGO DE ACESSO
-		if [ "$1" = "$ipClient" -a "$codigo" = "TCP_DENIED" ]; then
+		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" -a "$codigo" = "TCP_DENIED" ]; then
 			msg+="\n`echo $row | awk -F ' ' '{print $7}'`"
 		fi
 	done < log.txt
@@ -238,7 +228,7 @@ SearchSitesNegadosTodosIP() {
 
 	msg="******************\nLista de sistes com acesso negado:"
 	while read IP
-		do
+	do
 		msg+="\n$(ListSitesNegadosIP $IP)\n-"
 	done < IPs.txt
 	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
@@ -271,14 +261,44 @@ ListSitesDateIP() {
 
 	msg="******************\nLista de sistes por cliente em uma data:"
 	while read row
-		do
-		ipClient=`echo $row | awk -F ' ' '{print $3}'`
+	do
 		aux=`echo $row | awk -F ' ' '{print $1}'` ; data=`date --date=@$aux +%F`
 		
-		if [ "$searchIp" = "$ipClient" -a "$searchData" = "$data" ]; then
+		if [ "$searchIp" = "`echo $row | awk -F ' ' '{print $3}'`" -a "$searchData" = "$data" ]; then
 			msg+="\n$data - `echo $row | awk -F ' ' '{print $7}'`"
 		fi
 	done < log.txt
+
+	echo -e "$msg"
+	echo -e "$msg" >> RELATORIO.txt
+}
+
+#################
+# QUINTO   ITEM #
+#################
+
+# FUNÇÃO RESPONSAVEL POR FAZER A LISTAGEM DOS QUANTITATIVOS, POR CONTEUDO DOS SITES ACESSADOS POR UM CLIENTE
+QntAcessoConteudo() {
+	read -p "### Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	
+	msg="******************\nQuantitativos de acessos por conteúdo:"
+	# CRIA UM ARQUIVO COM TODOS OS SITES E SEUS RESPECTIVOS TIPOS PARA UM IP PASSADO
+	while read row
+	do
+		if [[ "$searchIp" = "`echo $row | awk -F ' ' '{print $3}'`" ]]; then
+			echo -e "`echo $row | awk -F ' ' '{print $10}'` - `echo $row | awk -F ' ' '{print $7}'`" >> aux.txt
+			sort aux.txt | uniq > tipoConteudo.txt;
+		fi
+	done < log.txt
+	# ADICONA AO ARQUIVO TODOS OS TIPOS DE CONTEUDO EXISTENTES NO ARQUIVO 'tipoConteudo.txt'
+	cat tipoConteudo.txt | awk -F ' ' '{print $1}' | sort | uniq > aux.txt
+	
+	# PARA CADA TIPO DE CONTEUDO EXISTENTE CALCULA A QUANTIDADE TOTAL DOS MESMO
+	while read tipo
+	do
+		msg+="\n$tipo - $(grep -c $tipo tipoConteudo.txt)"
+	done < aux.txt
+	rm aux.txt ; rm tipoConteudo.txt
 
 	echo -e "$msg"
 	echo -e "$msg" >> RELATORIO.txt
@@ -297,13 +317,9 @@ CheckOptions() {
 		5) clear
 		   ListSitesDateIP ;;
 		6) clear
-		   echo "Opção 6" ;;
+		   QntAcessoConteudo ;;
 		7) clear
-		   echo "Opção 7" ;;
-		8) clear
-		   echo "Opção 8" ;;
-		9) clear
-		   echo "Adios Amigo"
+		   echo "******************" >> RELATORIO.txt
 		   exit 0 ;;
 		*) clear
 		   echo "$1 é uma opção invalida !!!"
@@ -320,7 +336,7 @@ if [[ $? -eq 0 ]]; then
 		# CHAMADA DA FUNÇÃO DE EXIBIÇÃO DOS ITENS DO MENU
 		Menu
 		
-		tput cup 20 19 ; read opt
+		tput cup 16 19 ; read opt
 
 		# CHAMA A FUNÇÃO RESPONSAVEL POR ACIONAR A FUNÇÃO RESPECTIVA AO VALOR ESCOLHIDO PELO USUARIO NO MENU
 		CheckOptions $opt
