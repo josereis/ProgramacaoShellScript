@@ -1,0 +1,9 @@
+1522292400.400 50 10.2.10.26 TCP_MISS/200 100 GET http://l.yimg.com/zz/combo? - DIRECT/200.152.174.74 image/gif
+1522292400.400 53 10.2.10.26 TCP_DENIED 200 GET http://www.hot.com - DIRECT/200.152.174.74 text/html
+1522292400.400 20 10.2.10.26 TCP_MISS/200 100 GET http://globo.com - DIRECT/200.152.174.74 application/javascript
+1522292400.400 10 10.2.10.26 TCP_DENIED 100 GET http://www.playboy.com - DIRECT/200.152.174.74 text/html
+1522292400.400 05 10.2.10.30 TCP_HIT/200 50 GET http://hotmail.com - DIRECT/200.152.174.74 application/javascript
+1522292400.400 100 10.2.10.30 TCP_MISS/200 200 GET http://yahoo.com.br - DIRECT/200.152.174.74 image/gif
+1522292400.400 53 10.2.10.30 TCP_DENIED 300 GET http://www.xxx.com - DIRECT/200.152.174.74 application/javascript
+1522292400.400 55 10.2.10.26 TCP_DENIED 200 GET http://www.marcohot.com - DIRECT/200.152.174.74 text/html
+1522292400.400 50 10.2.10.26 TCP_MISS/200 100 GET http://l.yimg.com/zz/combo? - DIRECT/200.152.174.74 image/gif
