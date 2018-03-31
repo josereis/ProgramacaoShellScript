@@ -208,6 +208,82 @@ PctSitesCacheAndDirect() {
 # QUARTO   ITEM #
 #################
 
+# FUNCAO RESPONSAVEL POR LISTAR TODOS OS SITES COM PERMISSÃO DE ACESSO NEGADA PARA UM IP
+ListSitesNegadosIP() {
+	msg="$1"
+	while read row
+		do
+		ipClient=`echo $row | awk -F ' ' '{print $3}'`
+		codigo=`echo $row | awk -F ' ' '{print $4}'` # CAPTURA O VALOR DO CODIGO DE ACESSO
+		if [ "$1" = "$ipClient" -a "$codigo" = "TCP_DENIED" ]; then
+			msg+="\n`echo $row | awk -F ' ' '{print $7}'`"
+		fi
+	done < log.txt
+
+	echo "$msg"
+}
+
+SearchSitesNegadosIP() {
+	read -p "### Digite o IP desejado " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+
+	#ListSitesNegadosIP $searchIp
+	msg="******************\nLista de sistes com acesso negado:$(ListSitesNegadosIP $searchIp)"
+
+	echo -e "$msg" #IMPRIME A MENSAGEM
+	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
+}
+
+SearchSitesNegadosTodosIP() {
+	FoundIPs # CRIA UM ARQUIVO 'IPs.txt' COM TODOS OS IPS EXISTENTES NO ARQUIVO DE LOG
+
+	msg="******************\nLista de sistes com acesso negado:"
+	while read IP
+		do
+		msg+="\n$(ListSitesNegadosIP $IP)\n-"
+	done < IPs.txt
+	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
+
+	echo -e "$msg" #IMPRIME A MENSAGEM
+	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
+}
+
+SitesNegados() {
+	SubMenuItem
+	tput cup 7 19 ; read opt
+
+	case $opt in
+		1) clear
+		   SearchSitesNegadosIP ;;
+		2) clear
+		   SearchSitesNegadosTodosIP ;;
+		*) clear ;;
+	esac
+}
+
+#################
+# QUINTO   ITEM #
+#################
+
+# LISTA TODOS OS SITES ACESSADOS POR UM CLIENTE EM UM DETERMINADO DIA
+ListSitesDateIP() {
+	read -p "### Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	read -p "### Digite a Data desejado(Formato: AAAA-MM-DD): " searchData # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+
+	msg="******************\nLista de sistes por cliente em uma data:"
+	while read row
+		do
+		ipClient=`echo $row | awk -F ' ' '{print $3}'`
+		aux=`echo $row | awk -F ' ' '{print $1}'` ; data=`date --date=@$aux +%F`
+		
+		if [ "$searchIp" = "$ipClient" -a "$searchData" = "$data" ]; then
+			msg+="\n$data - `echo $row | awk -F ' ' '{print $7}'`"
+		fi
+	done < log.txt
+
+	echo -e "$msg"
+	echo -e "$msg" >> RELATORIO.txt
+}
+
 CheckOptions() {
 	case $1 in
 		1) clear
@@ -217,9 +293,9 @@ CheckOptions() {
 		3) clear
 		   PctSitesCacheAndDirect ;;
 		4) clear
-		   echo "Opção 4" ;;
+		   SitesNegados ;;
 		5) clear
-		   echo "Opção 5" ;;
+		   ListSitesDateIP ;;
 		6) clear
 		   echo "Opção 6" ;;
 		7) clear
