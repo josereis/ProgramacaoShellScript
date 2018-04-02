@@ -282,6 +282,7 @@ if [[ $? -eq 0 ]]; then
 
 		if [ $cont = "N" ] || [ $cont = "n" ]; then
 			echo -e "Finalizando processos. Saindo em 3, 2, 1..."
+			echo "******************" >> RELATORIO.txt
 			sleep 1;
 			exit 1
 		fi
@@ -290,3 +291,4 @@ else
 	echo "	#########################################################################################
 	# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #
 	#########################################################################################"
+fi
