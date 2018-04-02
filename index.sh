@@ -43,56 +43,36 @@ Digite sua Opcao:
 
 # FUNÇÃO RESPONSAVEL POR MONTAR UM ARQUIVO COM TODOS OS IPs DO ARQUIVO DE LOG (SEM REPETIÇÕES)
 FoundIPs() {
-	while read row
-		do
-		echo $row |  awk -F ' ' '{print $3}' >> aux.txt
-		sort aux.txt | uniq > IPs.txt
-	done < log.txt
-	rm aux.txt # REMOVE O ARQUIVO DE TEXTO AUXILIAR PARA LISTAGEM DOS IPS
+	# BUSCA TODOS OS IPS (SEM REPETIÇÕES) CONTIDOS NO ARQUIVO DE LOG  E SALVA EM UM ARQUIVO AUXILIAR CHAMADO IPs.txt
+	`cat $1 | awk -F ' ' '{print $3}' | sort | uniq > IPs.txt`
 }
 
 #################
 # PRIMEIRO ITEM #
 #################
 
-NumSitesDifIP() {
+NumSitesDifIp() { # PARAMETROS QUE DEVEM SER PASSADOS $1 - ENDEREÇO DO ARQUIVO(NOME) | $2 - IP BUSCADO
+	# RETORNA PARA A VARIAVEL $numberSites O NUMERO DE SITES DIFERENTES ACESSADOS POR UM IP BUSCADO
+	numberSites=`cat $1 | grep $2 | awk -F ' ' '{print $7}' | sort | uniq | wc -l`
 
-	#read -p "### Digite o IP desejado " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
-
-	# PASSEIA POR TODO O ARQUIVO DE LOGs
-	while read row
-	do
-		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" ]; then
-			echo $row | awk -F ' ' '{print $7}' >> aux.txt # CAPTURA O VALOR/ENDERECO DO SITE ACESSADO PELO CLIENTE DA LINHA ATUAL E SALVA EM ARQUIVO AUXILIAR
-			sort aux.txt | uniq > sites.txt
-		fi
-	done < log.txt
-	rm aux.txt # REMOVE O ARQUIVO DE TEXTO AUXILIAR PARA LISTAGEM DOS IPS
-
-	num=`wc -l sites.txt | awk -F ' ' '{print $1}'` #O COMANDO (wc -l) RETORNA A QUANTIDADE DE LINHAS DE UM ARQUIVO
-	
-	rm sites.txt # REMOVE O ARQUIVO DE TEXTO QUE CONTEM OS SITES ACESSADOS POR UM DETERMINADO CLIENTE IP
-
-	echo "$1 - $num sites" # IMPRIME O NUMERO DE SITES DIFERENTES PARA O IP BUSCADO
+	echo "$2 - $numberSites sites" # ESCREVE O IP PASSADO PARA A BUSCA SEGUIDO DO NUMERO DE SITES DIFERENTES QUE FORAM ACESSADOS POR ESTE IP
 }
 
-SearchNumSitesDifIP() {
-	read -p "### Digite o IP desejado " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+SearchNumSitesDifIP() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA
+	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	msg="******************\nSites diferentes por IP:\n$(NumSitesDifIp $1 $searchIp)"
 
-	msg="******************\nSites diferentes por IP:\n$(NumSitesDifIP $searchIp)"
-	
 	echo -e "$msg" #IMPRIME A MENSAGEM COM O VALOR DE SITES DIFERENTES ACESSADOS POR UM CLIENTE NO CONSOLE
 	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
 }
 
-# LISTA O NUMERO DE SITES DIFERENTES ACESSADOS POR CADA UM DOS CLIENTES IP DO ARQUIVO DE log.txt
-SearchNumSitesDifClients() {
-	FoundIPs # CRIA UM ARQUIVO 'IPs.txt' COM TODOS OS IPS EXISTENTES NO ARQUIVO DE LOG
+SearchNumSitesDifTodosIP() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA
+	FoundIPs $1 # CRIA ARQUIVO IPs.txt COM TODOS OS IPs CONTIDOS NO ARQUIVO
 
 	msg="******************\nSites diferentes por IP:"
 	while read IP
 	do
-		msg+="\n$(NumSitesDifIP $IP)"
+		msg+="\n$(NumSitesDifIp $1 $IP)"
 	done < IPs.txt
 	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
 
@@ -101,15 +81,15 @@ SearchNumSitesDifClients() {
 }
 
 # FUNÇÃO RESPONSAVEL POR LISTAR O NUMERO DE SITES DIFERENTES ACESSADOS POR CADA CLIENTE IP
-NumSitesDif() {
+NumSitesDif() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO EFETUADAS AS PESQUISAS
 	SubMenuItem
 	tput cup 7 19 ; read opt
 	
 	case $opt in
 		1) clear
-		   SearchNumSitesDifIP ;;
+		   SearchNumSitesDifIP $1 ;;
 		2) clear
-		   SearchNumSitesDifClients ;;
+		   SearchNumSitesDifTodosIP $1 ;;
 		*) clear ;;
 	esac
 }
@@ -117,41 +97,31 @@ NumSitesDif() {
 #################
 # SEGUNDO  ITEM #
 #################
-TotalBytesPorIP() {
-	totalBytes=0 # VARIAVEL QUE VAI ARMAZENAR A QUANTIDADE DE BYTES TOTAL
-	
-	# PASSEIA POR TODO O ARQUIVO DE LOGs
-	while read row
-	do
-		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" ]; then
-			bytes=`echo $row | awk -F ' ' '{print $5}'` # CAPTURA A QUANTIDADE DE BYTES TRANSFERIDAS
-			totalBytes=`expr $totalBytes + $bytes`
-		fi
-	done < log.txt
-	
-	echo "$1 - $totalBytes bytes" # IMPRIME O TOTAL DE BYTES TRANSFERIDOS POR UM IP BUSCADO
+TotalBytesPorIP() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA E O VALOR CORRESPONDENTE AO IP BUSCADO
+	totalBytes=`cat $1 | grep $2 | awk -F ' ' 'BEGIN{total = 0}{total+=$5}END{print total}'`
+
+	echo "$2 - $totalBytes bytes" # IMPRIME O TOTAL DE BYTES TRANSFERIDOS POR UM IP BUSCADO
 }
 
-SearchTotalBytesIP() {
-	read -p "### Digite o IP desejado " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+SearchTotalBytesIP() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA
+	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
 
-	msg="******************\nTotal de bytes transferidos por IP:\n$(TotalBytesPorIP $searchIp)"
+	msg="******************\nTotal de bytes transferidos por IP:\n$(TotalBytesPorIP $1 $searchIp)"
 
 	echo -e "$msg" #IMPRIME A MENSAGEM COM O VALOR DE SITES DIFERENTES ACESSADOS POR UM CLIENTE NO CONSOLE
 	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
 }
 
 SearchTotalBytesTodosIP() {
-	FoundIPs # CRIA UM ARQUIVO 'IPs.txt' COM TODOS OS IPS EXISTENTES NO ARQUIVO DE LOG
+	FoundIPs $1 # CRIA ARQUIVO IPs.txt COM TODOS OS IPs CONTIDOS NO ARQUIVO
 
 	msg="******************\nTotal de bytes transferidos por IP:"
+	
 	while read IP
 	do
-		msg+="\n$(TotalBytesPorIP $IP)"
+		msg+="\n$(TotalBytesPorIP $1 $IP)"
 	done < IPs.txt
-	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
-
-	echo -e "$msg" #IMPRIME A MENSAGEM
+	echo -e "$msg" #IMPRIME A MENSAGEM COM O VALOR DE SITES DIFERENTES ACESSADOS POR UM CLIENTE NO CONSOLE
 	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
 }
 
@@ -161,75 +131,59 @@ TotalBytes() {
 
 	case $opt in
 		1) clear
-		   SearchTotalBytesIP ;;
+		   SearchTotalBytesIP $1 ;;
 		2) clear
-		   SearchTotalBytesTodosIP ;;
+		   SearchTotalBytesTodosIP $1 ;;
 		*) clear ;;
 	esac
 }
 
 #################
-# TERCEIRO ITEM #
+# TERCEIRO ITEM # (TEM UM ERRO NO TRUNCAMENTO DO VALOR)
 #################
-
-# CALCULA O TOTAL DE SITES ENCONTRADOS NA CACHE
-PctSitesCacheAndDirect() {
-	while read row
-	do
-		codigo=`echo $row | awk -F ' ' '{print $4}'` # CAPTURA O VALOR DO CODIGO RESULTANTE DO ACESSO
-
-		if [[ "$codigo" = "TCP_HIT/200" ]]; then # VERIFICA SE FOI OBTIDO A PARTIR DA CACHE
-			hit=`expr $hit + 1`
-		else
-			if [[ "$codigo" = "TCP_MISS/200" ]]; then # VERIFICA SE FOI OBTIDO DIRETAMENTE
-				miss=`expr $miss + 1`
-			fi
-		fi
-	done < log.txt
-
-	totalHitMiss=`echo "scale=0 ; $hit + $miss" | bc`
-	pctHit=`echo "scale=0 ; ($hit * 100) / $totalHitMiss" | bc`
-	pctMiss=`echo "scale=0 ; ($miss * 100) / $totalHitMiss " | bc`
+PctSitesCacheAndDirect() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA
+	numberHit=`cat $1 | awk -F ' ' '{print $4}' | egrep 'TCP_HIT' | wc -l`
+	numberMiss=`cat $1 | awk -F ' ' '{print $4}' | egrep 'TCP_MISS' | wc -l`
+	totalHitMiss=`echo "scale=0 ; $numberHit + $numberMiss" | bc`
+	
+	pctHit=`echo "scale=0 ; ($numberHit * 100) / $totalHitMiss" | bc`
+	pctMiss=`echo "scale=0 ; ($numberMiss * 100) / $totalHitMiss" | bc`
 
 	echo -e "******************\nPercentual de sites na cache e de acesso direto:\nCache: $pctHit%\nDireto: $pctMiss%" #IMPRIME A MENSAGEM
 	echo -e "******************\nPercentual de sites na cache e de acesso direto:\nCache: $pctHit%\nDireto: $pctMiss%" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
 }
 
+## cat access.log | awk -F ' ' '{print $4}' | egrep 'TCP_MISS' | wc -l (=> retorna o numero de aparições de TCP_MISS no arquivo)
+## cat access.log | awk -F ' ' '{print $4}' | egrep 'TCP_HIT' | wc -l (=> retorna o numero de aparições de TCP_MISS no arquivo)
+## cat access.log | awk -F ' ' '{print $4}' | egrep 'TCP_ENIED' | wc -l (=> retorna o numero de aparições de TCP_MISS no arquivo)
+
 #################
 # QUARTO   ITEM #
 #################
 
-# FUNCAO RESPONSAVEL POR LISTAR TODOS OS SITES COM PERMISSÃO DE ACESSO NEGADA PARA UM IP
 ListSitesNegadosIP() {
-	msg="$1"
-	while read row
-	do
-		codigo=`echo $row | awk -F ' ' '{print $4}'` # CAPTURA O VALOR DO CODIGO DE ACESSO
-		if [ "$1" = "`echo $row | awk -F ' ' '{print $3}'`" -a "$codigo" = "TCP_DENIED" ]; then
-			msg+="\n`echo $row | awk -F ' ' '{print $7}'`"
-		fi
-	done < log.txt
+	# MONTA UMA LISTA, SEPARADA POR ' ' DE SITES ACESSADOS POR UM DETERMINADO IP 
+	list=`cat $1 | grep $2 | egrep 'TCP_DENIED' | awk -F ' ' '{print $7}' | sort | uniq | tr ' ' '\n'`
 
-	echo "$msg"
+	echo "$2\n$list\n-" # IMPRIME A LISTA SUBSTITUINDO OS ' ' POR '\n'
 }
 
 SearchSitesNegadosIP() {
-	read -p "### Digite o IP desejado " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
 
-	#ListSitesNegadosIP $searchIp
-	msg="******************\nLista de sistes com acesso negado:$(ListSitesNegadosIP $searchIp)"
+	msg="******************\nLista de sistes com acesso negado:\n$(ListSitesNegadosIP $1 $searchIp)"
 
 	echo -e "$msg" #IMPRIME A MENSAGEM
 	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS
 }
 
 SearchSitesNegadosTodosIP() {
-	FoundIPs # CRIA UM ARQUIVO 'IPs.txt' COM TODOS OS IPS EXISTENTES NO ARQUIVO DE LOG
+	FoundIPs $1 # CRIA UM ARQUIVO 'IPs.txt' COM TODOS OS IPS EXISTENTES NO ARQUIVO DE LOG
 
 	msg="******************\nLista de sistes com acesso negado:"
 	while read IP
 	do
-		msg+="\n$(ListSitesNegadosIP $IP)\n-"
+		msg+="\n$(ListSitesNegadosIP $1 $IP)"
 	done < IPs.txt
 	rm IPs.txt # REMOVE O ARQUIVO DE TEXTO COM A LISTAGEM DOS IPS
 
@@ -243,9 +197,9 @@ SitesNegados() {
 
 	case $opt in
 		1) clear
-		   SearchSitesNegadosIP ;;
+		   SearchSitesNegadosIP $1 ;;
 		2) clear
-		   SearchSitesNegadosTodosIP ;;
+		   SearchSitesNegadosTodosIP $1 ;;
 		*) clear ;;
 	esac
 }
@@ -256,68 +210,49 @@ SitesNegados() {
 
 # LISTA TODOS OS SITES ACESSADOS POR UM CLIENTE EM UM DETERMINADO DIA
 ListSitesDateIP() {
-	read -p "### Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
-	read -p "### Digite a Data desejado(Formato: AAAA-MM-DD): " searchData # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	read -p "Digite a Data desejado(Formato: dd-mm-yyyy): " searchData # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
 
-	msg="******************\nLista de sistes por cliente em uma data:"
-	while read row
-	do
-		aux=`echo $row | awk -F ' ' '{print $1}'` ; data=`date --date=@$aux +%F`
-		
-		if [ "$searchIp" = "`echo $row | awk -F ' ' '{print $3}'`" -a "$searchData" = "$data" ]; then
-			msg+="\n$data - `echo $row | awk -F ' ' '{print $7}'`"
-		fi
-	done < log.txt
-
-	echo -e "$msg"
-	echo -e "$msg" >> RELATORIO.txt
+	list=`cat $1 | grep $searchIp | awk -F ' ' '{$1=strftime("%d-%m-%Y", $1); print $1" " $7}' | grep $searchData | cut -d ' ' -f 2 | sort | uniq`
+	
+	msg="******************\nLista de sistes por cliente em uma data:\n$searchIp ($searchData):\n$list"
+	echo -e "$msg" #IMPRIME A MENSAGEM
+	echo -e "$msg" >> RELATORIO.txt # IMPRIME A MESAGEM NO ARQUIVO DE RELATORIOS 
 }
 
 #################
-# QUINTO   ITEM #
+# SEXTO    ITEM #
 #################
 
 # FUNÇÃO RESPONSAVEL POR FAZER A LISTAGEM DOS QUANTITATIVOS, POR CONTEUDO DOS SITES ACESSADOS POR UM CLIENTE
 QntAcessoConteudo() {
-	read -p "### Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
-	
-	msg="******************\nQuantitativos de acessos por conteúdo:"
-	# CRIA UM ARQUIVO COM TODOS OS SITES E SEUS RESPECTIVOS TIPOS PARA UM IP PASSADO
-	while read row
-	do
-		if [[ "$searchIp" = "`echo $row | awk -F ' ' '{print $3}'`" ]]; then
-			echo -e "`echo $row | awk -F ' ' '{print $10}'` - `echo $row | awk -F ' ' '{print $7}'`" >> aux.txt
-			sort aux.txt | uniq > tipoConteudo.txt;
-		fi
-	done < log.txt
-	# ADICONA AO ARQUIVO TODOS OS TIPOS DE CONTEUDO EXISTENTES NO ARQUIVO 'tipoConteudo.txt'
-	cat tipoConteudo.txt | awk -F ' ' '{print $1}' | sort | uniq > aux.txt
-	
-	# PARA CADA TIPO DE CONTEUDO EXISTENTE CALCULA A QUANTIDADE TOTAL DOS MESMO
+	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	#tiposConteudo=`cat access.log | grep 10.2.2.48 | awk -F ' ' '{print $10}' | sort | uniq` # LISTA DE TODOS OS TIPOS DE CONTEUDO BUSCADOS PARA O IP PESQUISADO
+	cat $1 | grep $searchIp | awk -F ' ' '{print $10}' | sort | uniq > tipos.txt
+	msg="******************\nQuantitativos de acessos por conteúdo:\n"
 	while read tipo
 	do
-		msg+="\n$tipo - $(grep -c $tipo tipoConteudo.txt)"
-	done < aux.txt
-	rm aux.txt ; rm tipoConteudo.txt
+		msg+="$tipo - `cat $1 | grep $searchIp | awk -F ' ' '{print $7 " " $10}' | sort | uniq | cut -d ' ' -f 2 | grep $tipo | wc -l`\n"
+	done < tipos.txt
+	rm tipos.txt
 
 	echo -e "$msg"
-	echo -e "$msg" >> RELATORIO.txt
 }
 
-CheckOptions() {
+CheckOptions() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO EFETUADAS AS PESQUISAS E O VALOR CORRESPONDENTE A QUAL FUNÇÃO SERÁ ACIONADA
 	case $1 in
 		1) clear
-		   NumSitesDif ;;
+		   NumSitesDif $2;;
 		2) clear
-		   TotalBytes ;;
+		   TotalBytes $2 ;;
 		3) clear
-		   PctSitesCacheAndDirect ;;
+		   PctSitesCacheAndDirect $2 ;;
 		4) clear
-		   SitesNegados ;;
+		   SitesNegados $2 ;;
 		5) clear
-		   ListSitesDateIP ;;
+		   ListSitesDateIP $2 ;;
 		6) clear
-		   QntAcessoConteudo ;;
+		   QntAcessoConteudo $2 ;;
 		7) clear
 		   echo "******************" >> RELATORIO.txt
 		   exit 0 ;;
@@ -327,8 +262,10 @@ CheckOptions() {
 	esac
 }
 
+# GRAVA O NOME DO ARQUIVO ONDE SERÃO FEITAS AS PESQUISAS
+read -p "DIGITE O CAMINHO DE ACESSO PARA O ARQUIVO DE LOG: " fileName
 
-test -f "log.txt" # COMANDO PARA TESTAR SE O ARQUIVO DE LOG EXISTE OU NÃO
+test -f $fileName # COMANDO PARA TESTAR SE O ARQUIVO DE LOG EXISTE OU NÃO
 # TESTA O VALOR RETORNADO PARA A VERIFICAÇÃO DA EXISTENCIA DO ARQUIVO DE LOG
 if [[ $? -eq 0 ]]; then
 	# DANDO INICIO AO LOOP DE EXECUÇÃO DO SISTEMA
@@ -339,7 +276,7 @@ if [[ $? -eq 0 ]]; then
 		tput cup 16 19 ; read opt
 
 		# CHAMA A FUNÇÃO RESPONSAVEL POR ACIONAR A FUNÇÃO RESPECTIVA AO VALOR ESCOLHIDO PELO USUARIO NO MENU
-		CheckOptions $opt
+		CheckOptions $opt $fileName
 
 		read -p "### Continuar no Menu Principal? (S/N) " cont
 
@@ -353,4 +290,3 @@ else
 	echo "	#########################################################################################
 	# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #
 	#########################################################################################"
-fi
