@@ -5,8 +5,6 @@
 1. Dependencias
 
 	* Sistema LINUX
-	
-	* Arquivo 'log.txt" deve estar presente no diretorio raiz do projeto, ou seu caminho de acesso deve ser alterado no Script
 
 2. Rodando o Script
 
