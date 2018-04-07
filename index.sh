@@ -57,7 +57,7 @@ FoundIPs() {
 
 NumSitesDifIp() { # PARAMETROS QUE DEVEM SER PASSADOS $1 - ENDEREÇO DO ARQUIVO(NOME) | $2 - IP BUSCADO
 	# RETORNA PARA A VARIAVEL $numberSites O NUMERO DE SITES DIFERENTES ACESSADOS POR UM IP BUSCADO
-	numberSites=`cat $1 | grep $2 | egrep -v "TCP_DENIED" | awk -F ' ' '{print $7}' | sort | uniq | wc -l`
+	numberSites=`cat $1 | grep " $2" | egrep -v "TCP_DENIED" | awk -F ' ' '{print $7}' | sort | uniq | wc -l`
 
 	echo "$2 - $numberSites sites" # ESCREVE O IP PASSADO PARA A BUSCA SEGUIDO DO NUMERO DE SITES DIFERENTES QUE FORAM ACESSADOS POR ESTE IP
 }
@@ -100,7 +100,7 @@ NumSitesDif() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO 
 # SEGUNDO  ITEM #
 #################
 TotalBytesPorIP() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO ONDE SERÁ EFETUADA A PESQUISA E O VALOR CORRESPONDENTE AO IP BUSCADO
-	totalBytes=`cat $1 | grep $2 | awk -F ' ' 'BEGIN{total = 0}{total+=$5}END{print total}'`
+	totalBytes=`cat $1 | grep " $2" | awk -F ' ' 'BEGIN{total = 0}{total+=$5}END{print total}'`
 
 	echo "$2 - $totalBytes bytes" # IMPRIME O TOTAL DE BYTES TRANSFERIDOS POR UM IP BUSCADO
 }
@@ -158,7 +158,7 @@ PctSitesCacheAndDirect() { # RECEBE COMO PARAMETRO O ENDEREÇO/NOME DO ARQUIVO O
 
 ListSitesNegadosIP() {
 	# MONTA UMA LISTA, SEPARADA POR ' ' DE SITES ACESSADOS POR UM DETERMINADO IP
-	list=`cat $1 | grep $2 | egrep 'TCP_DENIED' | awk -F ' ' '{print $7}' | sort | uniq | tr ' ' '\n' | awk -F '/' '{print $3}' | uniq`
+	list=`cat $1 | grep " $2" | egrep 'TCP_DENIED' | awk -F ' ' '{print $7}' | sort | uniq | tr ' ' '\n' | awk -F '/' '{print $3}' | uniq`
 
 	if [[ $list != "" ]]; then
 		echo "\n$2\n$list\n-" # IMPRIME A LISTA SUBSTITUINDO OS ' ' POR '\n'echo ""
@@ -208,7 +208,7 @@ ListSitesDateIP() {
 	read -p "Digite o IP desejado: " searchIp # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
 	read -p "Digite a Data desejado(Formato: dd-mm-yyyy): " searchData # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
 
-	list=`cat $1 | grep $searchIp | egrep -v "TCP_DENIED" | awk -F ' ' '{$1=strftime("%d-%m-%Y", $1); print $1" " $7}' | grep $searchData | cut -d ' ' -f 2 | awk -F '/' '{print $3}' | sort | uniq`
+	list=`cat $1 | grep " $searchIp" | egrep -v "TCP_DENIED" | awk -F ' ' '{$1=strftime("%d-%m-%Y", $1); print $1" " $7}' | grep $searchData | cut -d ' ' -f 2 | awk -F '/' '{print $3}' | sort | uniq`
 	
 	msg="******************\nLista de sistes por cliente em uma data\n$searchIp ($searchData):\n$list"
 	
@@ -227,7 +227,7 @@ QntAcessoConteudo() {
 	msg="******************\nQuantitativos de acessos por conteúdo\n"
 	while read tipo
 	do
-		msg+="$tipo - `cat $1 | grep $searchIp| egrep -v "TCP_DENIED" | awk -F ' ' '{print $7 " " $10}' | sort | uniq | cut -d ' ' -f 2 | grep $tipo | wc -l`\n"
+		msg+="$tipo - `cat $1 | grep " $searchIp" | egrep -v "TCP_DENIED" | awk -F ' ' '{print $10}' | grep $tipo | wc -l`\n"
 	done < tipos.txt
 	rm tipos.txt
 
@@ -240,7 +240,7 @@ QntAcessoConteudoTodosClientes() {
 	cat $1 | awk -F ' ' '{print $10}' | sort | uniq > tipos.txt
 	while read tipo
 	do
-		msg+="$tipo - `cat $1 | egrep -v "TCP_DENIED" | awk -F ' ' '{print $7 " " $10}' | sort | uniq | cut -d ' ' -f 2 | grep $tipo | wc -l`\n"
+		msg+="$tipo - `cat $1 | egrep -v "TCP_DENIED" | awk -F ' ' '{print $10}' | grep $tipo | wc -l`\n"
 	done < tipos.txt
 	rm tipos.txt
 
@@ -249,12 +249,14 @@ QntAcessoConteudoTodosClientes() {
 
 # FUNÇÃO RESPONSAVEL POR SALVAR O RELATORIO EM UM ARQUIVO DE TEXTO
 salveFile() {
-	SearchNumSitesDifTodosIP $1 >> RELATORIO.txt
-	SearchTotalBytesTodosIP $1 >> RELATORIO.txt
-	PctSitesCacheAndDirect $1 >> RELATORIO.txt
-	SearchSitesNegadosTodosIP $1 >> RELATORIO.txt
-	QntAcessoConteudoTodosClientes $1 >> RELATORIO.txt
-	echo "******************" >> RELATORIO.txt
+	read -p "SALVAR RELATORIO NO ARQUIVO: " file # LER O IP PARA O QUAL SE DESEJA SABER O NUMERO DE SITES DIFERENTES ACESSADOS
+	SearchNumSitesDifTodosIP $1 >> $file
+	SearchTotalBytesTodosIP $1 >> $file
+	PctSitesCacheAndDirect $1 >> $file
+	SearchSitesNegadosTodosIP $1 >> $file
+	QntAcessoConteudoTodosClientes $1 >> $file
+	`sed -i '$d' $file`
+	echo "******************" >> $file
 }
 
 CheckOptions() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO EFETUADAS AS PESQUISAS E O VALOR CORRESPONDENTE A QUAL FUNÇÃO SERÁ ACIONADA
@@ -262,19 +264,47 @@ CheckOptions() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO
 		1) clear
 		   read -p "DIGITE O CAMINHO DE ACESSO PARA O ARQUIVO DE LOG: " fileName ;;
 		2) clear
-		   NumSitesDif $2;;
+		   if [[ $2 != "" ]]; then
+		   		NumSitesDif $2
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		3) clear
-		   TotalBytes $2 ;;
+		   if [[ $2 != "" ]]; then
+		   		TotalBytes $2
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		4) clear
-		   PctSitesCacheAndDirect $2 ;;
+		   if [[ $2 != "" ]]; then
+		   		PctSitesCacheAndDirect $2
+			else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		5) clear
-		   SitesNegados $2 ;;
+		   if [[ $2 != "" ]]; then
+		   		SitesNegados $2
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		6) clear
-		   ListSitesDateIP $2 ;;
+		   if [[ $2 != "" ]]; then
+		   		ListSitesDateIP $2 
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		7) clear
-		   QntAcessoConteudo $2 ;;
+		   if [[ $2 != "" ]]; then
+		   		QntAcessoConteudo $2
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;
 		8) clear
-		   salveFile $2 ;;		
+		   if [[ $2 != "" ]]; then
+		   		salveFile $2
+		   else
+		   		echo -e "#########################################################################################\n# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #\n#########################################################################################"
+		   fi ;;		
 		9) clear
 		   exit 0 ;;
 		*) clear
@@ -283,26 +313,16 @@ CheckOptions() { # RECEBE COMO PARAMETRO O NOME/ENDEREÇO DO ARQUIVO ONDE SERÃO
 	esac
 }
 
-# GRAVA O NOME DO ARQUIVO ONDE SERÃO FEITAS AS PESQUISAS
-read -p "DIGITE O CAMINHO DE ACESSO PARA O ARQUIVO DE LOG: " fileName
 
-test -f $fileName # COMANDO PARA TESTAR SE O ARQUIVO DE LOG EXISTE OU NÃO
-# TESTA O VALOR RETORNADO PARA A VERIFICAÇÃO DA EXISTENCIA DO ARQUIVO DE LOG
-if [[ $? -eq 0 ]]; then
-	# DANDO INICIO AO LOOP DE EXECUÇÃO DO SISTEMA
-	while [[ true ]]; do
-		# CHAMADA DA FUNÇÃO DE EXIBIÇÃO DOS ITENS DO MENU
-		Menu $fileName
-		
-		tput cup 20 19 ; read opt
+fileName="" # VARIAVEL PARA ARMAZENAR O NOME/ENDERECO DO ARQUIVO
 
-		# CHAMA A FUNÇÃO RESPONSAVEL POR ACIONAR A FUNÇÃO RESPECTIVA AO VALOR ESCOLHIDO PELO USUARIO NO MENU
-		CheckOptions $opt $fileName
+while [[ true ]]; do
+	# CHAMADA DA FUNÇÃO DE EXIBIÇÃO DOS ITENS DO MENU
+	Menu $fileName
+	
+	tput cup 20 19 ; read opt
+	# CHAMA A FUNÇÃO RESPONSAVEL POR ACIONAR A FUNÇÃO RESPECTIVA AO VALOR ESCOLHIDO PELO USUARIO NO MENU
+	CheckOptions $opt $fileName
 
-		read -p "tecle ENTER para continuar" cont
-	done
-else
-	echo "	#########################################################################################
-	# Carregue/Adicione ao diretorio o arquivo de LOG (log.txt) antes de usar o sistema !!! #
-	#########################################################################################"
-fi
+	read -p "tecle ENTER para continuar" cont
+done
